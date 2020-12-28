@@ -20,7 +20,7 @@ SINet: Extreme Lightweight Portrait Segmentation Networks with Spatial Squeeze M
 
 - Preparing dataset
 
-if you use custom dataset, fix the code and parms in dataloader.py(DatasetLoader's "Load" call).
+if you use custom dataset, fix the code and parms in data_loader.py(DatasetLoader's "Load" call).
 
 - Train
 

@@ -30,11 +30,11 @@ from albumentations import (
 
 
 class DatasetLoader(object):
-    def __init__(self, buffer_size, batch_size, output_resolution=256, max_load_output_resolution=320):
+    def __init__(self, buffer_size, batch_size, output_resolution=256, max_load_resolution=320):
         self.buffer_size = buffer_size
         self.batch_size = batch_size
         self.output_resolution = output_resolution
-        self.max_load_output_resolution = max_load_output_resolution
+        self.max_load_resolution = max_load_resolution
 
     def get_all_images(self, image_path, supported_extensions=None):
         if supported_extensions is None:
@@ -143,7 +143,7 @@ class DatasetLoader(object):
         label = tf.image.decode_image(tf.io.read_file(label_file), channels=1)
         label.set_shape([None, None, 1])
         resize_image = self.resize_preserve_aspect_ratio(image,
-                                                         max_load_output_resolution=self.max_load_output_resolution)
+                                                         max_load_output_resolution=self.max_load_resolution)
         image_shape = tf.shape(resize_image)
         resize_label = tf.image.resize(tf.cast(label, tf.float32), size=[image_shape[0], image_shape[1]])
         if apply_albumentations:

@@ -33,13 +33,10 @@ class Train(object):
         if self.ckpt_manager.latest_checkpoint:
             self.ckpt.restore(self.ckpt_manager.latest_checkpoint)
             self.epoch = int(self.ckpt_manager.latest_checkpoint.split('-')[-1])
-            global_step = self.epoch * self.train_epoch_step
             tf.get_logger().info("Latest checkpoint restored:{}".format(self.ckpt_manager.latest_checkpoint))
         else:
-            global_step = 0
             self.epoch = 0
             tf.get_logger().info('Not restoring from saved checkpoint')
-        self.global_step = tf.cast(global_step, tf.int64)
         self.train_acc_metric = tf.keras.metrics.MeanIoU(
             num_classes=num_classes + 1 if num_classes == 1 else num_classes, name='train_accuracy')
         self.test_acc_metric = tf.keras.metrics.MeanIoU(
@@ -58,15 +55,15 @@ class Train(object):
             boundaries=milestones, values=lr_steps_value)
 
     def summary_loss(self):
-        steps = self.global_step + self.optimizer.iterations
+        training_step = self.optimizer.iterations
         with self.train_writer.as_default():
-            tf.summary.scalar('train_loss', self.train_loss_metric.result(), step=steps)
-            tf.summary.scalar('train_acc', self.train_acc_metric.result(), step=steps)
-            tf.summary.scalar('test_loss', self.test_loss_metric.result(), step=steps)
-            tf.summary.scalar('test_acc', self.test_acc_metric.result(), step=steps)
+            tf.summary.scalar('train_loss', self.train_loss_metric.result(), step=training_step)
+            tf.summary.scalar('train_acc', self.train_acc_metric.result(), step=training_step)
+            tf.summary.scalar('test_loss', self.test_loss_metric.result(), step=training_step)
+            tf.summary.scalar('test_acc', self.test_acc_metric.result(), step=training_step)
 
     def summary_image(self, mask, image, label, is_train=True, max_outputs=1):
-        training_step = self.global_step + self.optimizer.iterations
+        training_step = self.optimizer.iterations
         if is_train:
             tf.summary.image('train/image', image, max_outputs=max_outputs,
                              step=training_step)
@@ -168,7 +165,7 @@ class Train(object):
 
 
 def main(num_epochs, buffer_size, batch_size, datasets_path=None, output_resolution=512,
-         max_load_output_resolution=512, num_classes=2, num_gpu=None, use_tpu=False):
+         max_load_resolution=512, num_classes=2, num_gpu=None, use_tpu=False):
     physical_gpus = tf.config.experimental.list_physical_devices('GPU')
     if num_gpu is None:
         num_gpu = len(physical_gpus)
@@ -204,7 +201,7 @@ def main(num_epochs, buffer_size, batch_size, datasets_path=None, output_resolut
     checkpoint_dir = os.path.dirname(checkpoint_path)
     dataset_loader = DatasetLoader(buffer_size=buffer_size, batch_size=batch_size * strategy.num_replicas_in_sync,
                                    output_resolution=output_resolution,
-                                   max_load_output_resolution=max_load_output_resolution)
+                                   max_load_resolution=max_load_resolution)
     train_dataset, test_dataset, train_num_datasets, test_num_datasets = dataset_loader.load(
         datasets_path=datasets_path, train_dir_name="train", test_dir_name="test")
     tf.get_logger().info("train_num_datasets:{}".format(train_num_datasets))
@@ -240,7 +237,7 @@ def run_main(argv):
         'batch_size': 32,
         'datasets_path': "./data",  # 'Directory to store the dataset'
         'output_resolution': 512,
-        'max_load_output_resolution': 640,
+        'max_load_resolution': 640,
         'num_classes': 1,
         'num_gpu': None,
     }

@@ -12,7 +12,7 @@ class PReLU(tf.keras.layers.Layer):
 
 class ChannelShuffle(tf.keras.layers.Layer):
     def __init__(self, groups=2, name: str = None, trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(ChannelShuffle, self).__init__(name=name, trainable=trainable, **kwargs)
         self.groups = groups
 
     def build(self, input_shape):
@@ -27,22 +27,18 @@ class ChannelShuffle(tf.keras.layers.Layer):
         assert (self.channels % self.groups == 0)
         super().build(input_shape)
 
-    def channel_shuffle(self, x, groups):
-        assert (self.channels % groups == 0)
-        channels_per_group = self.channels // groups
-        x = tf.reshape(x, shape=(-1, self.height, self.width, self.groups, channels_per_group))
-        x = tf.transpose(x, perm=(0, 1, 2, 4, 3))
-        x = tf.reshape(x, shape=(-1, self.height, self.width, self.channels))
-        return x
-
     def call(self, inputs, **kwargs):
-        return self.channel_shuffle(inputs, groups=self.groups)
+        channels_per_group = self.channels // self.groups
+        out = tf.reshape(inputs, shape=(-1, self.height, self.width, self.groups, channels_per_group))
+        out = tf.transpose(out, perm=(0, 1, 2, 4, 3))
+        out = tf.reshape(out, shape=(-1, self.height, self.width, self.channels))
+        return out
 
 
 class Normalization(tf.keras.layers.Layer):
     def __init__(self, momentum=0.1, epsilon=1e-3, activation=None, is_sync: bool = True, name: str = None,
                  trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(Normalization, self).__init__(name=name, trainable=trainable, **kwargs)
         self.norm = tf.keras.layers.experimental.SyncBatchNormalization(momentum=momentum,
                                                                         epsilon=epsilon) if is_sync else tf.keras.layers.BatchNormalization(
             momentum=momentum, epsilon=epsilon)
@@ -56,10 +52,10 @@ class Normalization(tf.keras.layers.Layer):
 
 
 class Conv2D(tf.keras.layers.Layer):
-    def __init__(self, out_channels: int, kernel_size, stride=1, padding=0, dilation=1, groups: int = 1,
+    def __init__(self, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups: int = 1,
                  bias: bool = True, padding_mode: str = 'CONSTANT', apply_padding: bool = False,
                  activation=None, name: str = None, trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(Conv2D, self).__init__(name=name, trainable=trainable, **kwargs)
         self.padding_type = 'valid'
         if not apply_padding and padding != 0:
             self.padding_type = 'same'
@@ -94,7 +90,7 @@ class Conv2D(tf.keras.layers.Layer):
             self.height = input_shape[1].value
             self.width = input_shape[2].value
             self.channels = input_shape[3].value
-        if self.groups == self.channels and self.channels == self.out_channels:
+        if (self.groups == self.channels and self.channels == self.out_channels) or self.out_channels is None:
             self.conv = tf.keras.layers.DepthwiseConv2D(kernel_size=self.kernel_size, strides=self.stride,
                                                         dilation_rate=self.dilation, use_bias=self.bias,
                                                         kernel_regularizer=tf.keras.regularizers.l2(
@@ -132,7 +128,7 @@ class Conv2D(tf.keras.layers.Layer):
 
 class SqueezeBlock(tf.keras.layers.Layer):
     def __init__(self, exp_size, divide=4.0, name: str = None, trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(SqueezeBlock, self).__init__(name=name, trainable=trainable, **kwargs)
         if divide > 1:
             self.dense = tf.keras.Sequential([
                 tf.keras.layers.Dense(int(exp_size / divide)),
@@ -155,7 +151,7 @@ class SqueezeBlock(tf.keras.layers.Layer):
 class SqueezeSeparableConv2D(tf.keras.layers.Layer):
     def __init__(self, out_channels, kernel_size, stride=1, divide=2.0, name: str = None, trainable: bool = True,
                  **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(SqueezeSeparableConv2D, self).__init__(name=name, trainable=trainable, **kwargs)
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.strides = stride
@@ -209,7 +205,7 @@ class UpsamplingBilinear2D(tf.keras.layers.Layer):
 
 class S2Block(tf.keras.layers.Layer):
     def __init__(self, out_channels, config, name: str = None, trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(S2Block, self).__init__(name=name, trainable=trainable, **kwargs)
         kernel_size = config[0]
         pool_size = config[1]
         self.kernel_size = kernel_size
@@ -249,7 +245,7 @@ class S2Block(tf.keras.layers.Layer):
 
 class S2Module(tf.keras.layers.Layer):
     def __init__(self, out_channels, add=True, config=None, name: str = None, trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(S2Module, self).__init__(name=name, trainable=trainable, **kwargs)
         if config is None:
             config = [[3, 1], [5, 1]]
         group_n = len(config)
@@ -274,7 +270,7 @@ class S2Module(tf.keras.layers.Layer):
 
 class SINetEncoder(tf.keras.layers.Layer):
     def __init__(self, classes=20, p=5, q=3, chnn=1.0, name: str = None, trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(SINetEncoder, self).__init__(name=name, trainable=trainable, **kwargs)
         """
         :param classes: number of classes in the dataset. Default is 20 for the cityscapes
         :param p: depth multiplier
@@ -331,7 +327,7 @@ class SINetEncoder(tf.keras.layers.Layer):
 
 class SINet(tf.keras.Model):
     def __init__(self, num_classes=20, p=2, q=8, chnn=1.0, name: str = None, trainable: bool = True, **kwargs):
-        super().__init__(name=name, trainable=trainable, **kwargs)
+        super(SINet, self).__init__(name=name, trainable=trainable, **kwargs)
         """
         :param classes: number of classes in the dataset. Default is 20 for the cityscapes
         :param p: depth multiplier
@@ -371,8 +367,7 @@ class SINet(tf.keras.Model):
                                             activation=PReLU()))
         self.up3 = UpsamplingBilinear2D(scale_factor=2)
         self.classifier = Conv2D(num_classes, 3, 1, 1, bias=False,
-                                 activation=tf.keras.layers.Lambda(
-                                     lambda x: tf.nn.sigmoid(x)) if num_classes == 1 else tf.keras.layers.Softmax())
+                                 activation=tf.nn.sigmoid if num_classes == 1 else tf.nn.softmax)
 
     def call(self, inputs, **kwargs):
         out_down1 = self.conv_down1(inputs)  # 8h 8w
