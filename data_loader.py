@@ -94,10 +94,10 @@ class DatasetLoader(object):
                 s if s is not None else d for s, d in zip(static_shape, dynamic_shape)
             ]
 
-    def resize_preserve_aspect_ratio(self, image_data, max_load_output_resolution=640):
+    def resize_preserve_aspect_ratio(self, image_data, max_load_resolution=640):
         image = tf.cast(image_data, dtype=tf.float32)
         current_height, current_width = self._image_dimensions(image)[:2]
-        resize_ratio = tf.cast(max_load_output_resolution / tf.maximum(current_width, current_height), dtype=tf.float32)
+        resize_ratio = tf.cast(max_load_resolution / tf.maximum(current_width, current_height), dtype=tf.float32)
         scaled_height_const = tf.cast(tf.round(resize_ratio * tf.cast(current_height, tf.float32)), tf.int32)
         scaled_width_const = tf.cast(tf.round(resize_ratio * tf.cast(current_width, tf.float32)), tf.int32)
         resized_image_tensor = tf.image.resize(image, size=[scaled_height_const, scaled_width_const])
@@ -143,7 +143,7 @@ class DatasetLoader(object):
         label = tf.image.decode_image(tf.io.read_file(label_file), channels=1)
         label.set_shape([None, None, 1])
         resize_image = self.resize_preserve_aspect_ratio(image,
-                                                         max_load_output_resolution=self.max_load_resolution)
+                                                         max_load_resolution=self.max_load_resolution)
         image_shape = tf.shape(resize_image)
         resize_label = tf.image.resize(tf.cast(label, tf.float32), size=[image_shape[0], image_shape[1]])
         if apply_albumentations:
@@ -184,5 +184,4 @@ class DatasetLoader(object):
                                         num_parallel_calls=tf.data.experimental.AUTOTUNE).prefetch(
             tf.data.experimental.AUTOTUNE)
         test_dataset = test_dataset.shuffle(self.buffer_size).batch(self.batch_size, drop_remainder=True)
-
         return train_dataset, test_dataset, train_num_datasets, test_num_datasets
