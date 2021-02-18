@@ -325,7 +325,7 @@ class SINetEncoder(tf.keras.layers.Layer):
         return classifier
 
 
-class SINet(tf.keras.Model):
+class SINet(tf.keras.layers.Layer):
     def __init__(self, num_classes=20, p=2, q=8, chnn=1.0, name: str = None, trainable: bool = True, **kwargs):
         super(SINet, self).__init__(name=name, trainable=trainable, **kwargs)
         """
@@ -334,6 +334,9 @@ class SINet(tf.keras.Model):
         :param q: depth multiplier 
         """
         self.num_classes = num_classes
+        self.p = p
+        self.q = q
+        self.chnn = chnn
         config = [[[3, 1], [5, 1]], [[3, 1], [3, 1]],
                   [[3, 1], [5, 1]], [[3, 1], [3, 1]], [[5, 1], [3, 2]], [[5, 2], [3, 4]],
                   [[3, 1], [3, 1]], [[5, 1], [5, 1]], [[3, 2], [3, 4]], [[3, 1], [5, 2]]]
@@ -368,6 +371,16 @@ class SINet(tf.keras.Model):
         self.up3 = UpsamplingBilinear2D(scale_factor=2)
         self.classifier = Conv2D(num_classes, 3, 1, 1, bias=False,
                                  activation=tf.nn.sigmoid if num_classes == 1 else tf.nn.softmax)
+
+    def get_config(self):
+        config = {
+            "num_classes": self.num_classes,
+            "p": self.p,
+            "q": self.q,
+            "chnn": self.chnn,
+        }
+        base_config = super().get_config()
+        return {**base_config, **config}
 
     def call(self, inputs, **kwargs):
         out_down1 = self.conv_down1(inputs)  # 8h 8w
