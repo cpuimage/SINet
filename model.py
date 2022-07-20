@@ -253,7 +253,7 @@ class S2Module(tf.keras.layers.Layer):
         split_patch = out_channels - group_n * split_n
         self.conv_split = Conv2D(split_n, kernel_size=1, stride=1, padding=0, bias=False, groups=group_n)
         self.s2_d1 = S2Block(split_n + split_patch, config[0])
-        self.s2_d2 = S2Block(split_n, config[0])
+        self.s2_d2 = S2Block(split_n, config[1])
         self.norm = Normalization(activation=PReLU())
         self.add = add
         self.group_n = group_n
